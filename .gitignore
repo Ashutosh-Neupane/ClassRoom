@@ -32,3 +32,6 @@ logs
 
 # Docker
 .dockerignore
+
+# PR Description files
+PR_DESCRIPTION*.md
