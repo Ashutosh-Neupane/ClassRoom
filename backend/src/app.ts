@@ -3,6 +3,7 @@ import cors from "cors";
 import { errorHandler } from "./middlewares/errorHandler";
 import { sendSuccess, sendError } from "./utils/apiResponse";
 import { testModels } from "./controllers/test.controller";
+import { testRecurrenceEngine } from "./controllers/recurrence.test.controller";
 
 const app = express();
 
@@ -22,8 +23,11 @@ app.get('/api/health', (req, res) => {
 app.get('/api/test-models', testModels);
 app.post('/api/test-models', testModels);
 
+// Test recurrence engine
+app.get('/api/test-recurrence', testRecurrenceEngine);
+
 // 404 handler for undefined routes
-app.all('*', (req, res) => {
+app.use((req, res, next) => {
   sendError(res, 404, {
     title: "Route Not Found",
     message: `Cannot ${req.method} ${req.path}`,
