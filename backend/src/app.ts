@@ -6,6 +6,10 @@ import { testModels } from "./controllers/test.controller";
 import { testRecurrenceEngine } from "./controllers/recurrence.test.controller";
 import { testConflictDetection } from "./controllers/conflict.test.controller";
 import { debugConflictDetection } from "./controllers/debug.conflict.controller";
+import scheduleRoutes from "./modules/schedule/schedule.routes";
+
+import { testScheduleAPI } from "./controllers/schedule.test.controller";
+import { runScheduleAPITests } from "./controllers/automated.schedule.test.controller";
 
 const app = express();
 
@@ -33,6 +37,16 @@ app.get('/api/test-conflicts', testConflictDetection);
 
 // Debug conflict detection
 app.get('/api/debug-conflicts', debugConflictDetection);
+
+// Test schedule API
+app.get('/api/test-schedule-api', testScheduleAPI);
+
+// Automated schedule API tests
+app.get('/api/run-schedule-tests', runScheduleAPITests);
+app.post('/api/run-schedule-tests', runScheduleAPITests);
+
+// Schedule API routes
+app.use('/api/schedule', scheduleRoutes);
 
 // 404 handler for undefined routes
 app.use((req, res, next) => {
