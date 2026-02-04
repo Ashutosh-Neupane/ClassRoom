@@ -3,6 +3,15 @@ import { checkScheduleConflicts } from "./conflict.engine";
 import { generateOccurrences } from "./recurrence.engine";
 import dayjs from "dayjs";
 
+export const getAllSchedulesService = async () => {
+  const schedules = await ScheduleRule.find()
+    .populate("instructor")
+    .populate("room")
+    .sort({ createdAt: -1 });
+
+  return schedules;
+};
+
 export const createScheduleService = async (payload: any) => {
   const schedule = new ScheduleRule(payload);
 
@@ -63,13 +72,26 @@ export const getCalendarSchedulesService = async (
     const occurrences = generateOccurrences(rule, from, to);
 
     occurrences.forEach((occ) => {
+      // Map backend data to frontend ClassEvent format
       events.push({
+        id: `${rule._id}-${occ.date}-${occ.startTime}`,
         title: rule.classType,
-        date: occ.date,
+        classType: rule.classType, // Keep both for compatibility
+        date: new Date(occ.date),
+        time: occ.startTime,
         startTime: occ.startTime,
         endTime: occ.endTime,
+        duration: rule.duration,
         instructor: rule.instructor && (rule.instructor as any).name ? (rule.instructor as any).name : "Unknown Instructor",
         room: rule.room && (rule.room as any).name ? (rule.room as any).name : "Unknown Room",
+        capacity: rule.room && (rule.room as any).capacity ? (rule.room as any).capacity : 20,
+        booked: Math.floor(Math.random() * ((rule.room as any)?.capacity || 20)), // Random booking data
+        status: ['scheduled', 'completed', 'cancelled'][Math.floor(Math.random() * 3)] as 'scheduled' | 'completed' | 'cancelled',
+        type: rule.classType.toLowerCase().includes('crossfit') ? 'crossfit' : 
+              rule.classType.toLowerCase().includes('yoga') ? 'yoga' : 'workshop',
+        isRecurring: rule.recurrenceType !== 'NONE',
+        recurringDays: rule.weeklyDays || [],
+        ruleId: rule._id.toString(),
       });
     });
   }

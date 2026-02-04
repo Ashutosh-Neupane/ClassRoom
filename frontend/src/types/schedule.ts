@@ -1,10 +1,13 @@
 export interface ClassEvent {
   id: string;
   title: string;
+  classType: string;
   instructor: string;
   room: string;
-  date: Date;
+  date: Date | string;
   time: string;
+  startTime: string;
+  endTime: string;
   duration: number;
   capacity: number;
   booked: number;
@@ -12,6 +15,7 @@ export interface ClassEvent {
   type: 'crossfit' | 'yoga' | 'workshop';
   isRecurring?: boolean;
   recurringDays?: string[];
+  ruleId?: string;
 }
 
 export interface ClassType {

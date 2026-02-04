@@ -29,7 +29,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Schedule API routes (main feature)
-app.use('/api/schedule', scheduleRoutes);
+app.use('/api/schedules', scheduleRoutes);
 
 // Test routes (development only)
 app.get('/api/test-models', testModels);
