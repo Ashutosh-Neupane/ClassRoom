@@ -1,4 +1,4 @@
-import { ClassEvent } from '../../types/schedule';
+import { CalendarEvent } from '../../services/api';
 import { format } from 'date-fns';
 import { RefreshCw } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -18,32 +18,17 @@ import {
 import { Badge } from '../ui/badge';
 
 interface ListViewProps {
-  events: ClassEvent[];
-  onEventClick: (event: ClassEvent) => void;
+  events: CalendarEvent[];
+  onEventClick: (event: CalendarEvent) => void;
 }
 
 export function ListView({ events, onEventClick }: ListViewProps) {
-  const getStatusBadge = (status: ClassEvent['status']) => {
-    switch (status) {
-      case 'completed':
-        return (
-          <Badge className="bg-success/20 text-success hover:bg-success/30 border-0">
-            Complete
-          </Badge>
-        );
-      case 'cancelled':
-        return (
-          <Badge className="bg-destructive/20 text-destructive hover:bg-destructive/30 border-0">
-            Cancelled
-          </Badge>
-        );
-      case 'scheduled':
-        return (
-          <Badge className="bg-warning/20 text-warning hover:bg-warning/30 border-0">
-            Scheduled
-          </Badge>
-        );
-    }
+  const getStatusBadge = (isRecurring: boolean) => {
+    return (
+      <Badge className="bg-success/20 text-success hover:bg-success/30 border-0">
+        {isRecurring ? 'Recurring' : 'Scheduled'}
+      </Badge>
+    );
   };
 
   return (
@@ -56,24 +41,24 @@ export function ListView({ events, onEventClick }: ListViewProps) {
             <TableHead className="text-muted-foreground font-medium">Class Type</TableHead>
             <TableHead className="text-muted-foreground font-medium">Instructor</TableHead>
             <TableHead className="text-muted-foreground font-medium">Room</TableHead>
-            <TableHead className="text-muted-foreground font-medium">Bookings</TableHead>
+            <TableHead className="text-muted-foreground font-medium">Duration</TableHead>
             <TableHead className="text-muted-foreground font-medium">Status</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {events.map((event) => (
             <TableRow
-              key={event.id}
+              key={event._id}
               onClick={() => onEventClick(event)}
               className="cursor-pointer border-border hover:bg-secondary/50"
             >
               <TableCell className="font-medium">
                 {format(event.date, 'EEE, MMM d')}
               </TableCell>
-              <TableCell>{event.time}</TableCell>
+              <TableCell>{event.startTime} - {event.endTime}</TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  {event.title}
+                  {event.classType}
                   {event.isRecurring && (
                     <Tooltip>
                       <TooltipTrigger>
@@ -81,22 +66,7 @@ export function ListView({ events, onEventClick }: ListViewProps) {
                       </TooltipTrigger>
                       <TooltipContent className="bg-popover border-border">
                         <div className="text-sm">
-                          <p className="font-medium mb-1">Recurring at {event.time}</p>
-                          <div className="flex gap-1">
-                            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
-                              <span
-                                key={i}
-                                className={cn(
-                                  'w-5 h-5 rounded-full flex items-center justify-center text-xs',
-                                  event.recurringDays?.includes(day)
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-secondary text-muted-foreground'
-                                )}
-                              >
-                                {day}
-                              </span>
-                            ))}
-                          </div>
+                          <p className="font-medium mb-1">Recurring class</p>
                         </div>
                       </TooltipContent>
                     </Tooltip>
@@ -105,19 +75,8 @@ export function ListView({ events, onEventClick }: ListViewProps) {
               </TableCell>
               <TableCell>{event.instructor}</TableCell>
               <TableCell>{event.room}</TableCell>
-              <TableCell>
-                <span
-                  className={cn(
-                    event.booked / event.capacity > 0.7
-                      ? 'text-event-crossfit'
-                      : 'text-foreground'
-                  )}
-                >
-                  {event.booked}/{event.capacity}
-                </span>
-                <span className="text-success ml-2">+{Math.floor(Math.random() * 3)}</span>
-              </TableCell>
-              <TableCell>{getStatusBadge(event.status)}</TableCell>
+              <TableCell>{event.duration} mins</TableCell>
+              <TableCell>{getStatusBadge(event.isRecurring)}</TableCell>
             </TableRow>
           ))}
         </TableBody>

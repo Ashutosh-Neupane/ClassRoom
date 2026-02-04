@@ -9,8 +9,10 @@ import { DateNavigation } from '../components/schedule/DateNavigation';
 import { CalendarGrid } from '../components/schedule/CalendarGrid';
 import { ListView } from '../components/schedule/ListView';
 import { ScheduleClassModal } from '../components/schedule/ScheduleClassModal';
-import { ClassEvent, ViewMode, DisplayMode } from '../types/schedule';
-import { mockEvents } from '../data/mockData';
+import { useCalendarEvents, useCalendarNavigation, useHealthCheck } from '../hooks/useScheduleAPI';
+import { CalendarEvent } from '../services/api';
+import { toast } from 'sonner';
+import { DisplayMode, ViewMode } from '../types/schedule';
 
 export default function SchedulePage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -21,7 +23,19 @@ export default function SchedulePage() {
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<ClassEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+
+  // API Integration
+  const { data: events = [], isLoading, error } = useCalendarEvents(currentDate, viewMode);
+  const { prefetchNext, prefetchPrevious } = useCalendarNavigation(currentDate, viewMode);
+  const { data: healthStatus } = useHealthCheck();
+
+  // Show error toast if API call fails
+  if (error) {
+    toast.error('Failed to load calendar events', {
+      description: 'Please check your connection and try again',
+    });
+  }
 
   // Apply dark mode
   useState(() => {
@@ -35,32 +49,29 @@ export default function SchedulePage() {
     document.documentElement.classList.toggle('dark');
   };
 
-  const handleEventClick = (event: ClassEvent) => {
+  const handleEventClick = (event: CalendarEvent) => {
     setSelectedEvent(event);
     console.log('Event clicked:', event);
   };
 
+  const handleDateChange = (newDate: Date) => {
+    setCurrentDate(newDate);
+    // Prefetch adjacent data
+    prefetchNext();
+    prefetchPrevious();
+  };
+
   // Filter events based on search
   const filteredEvents = useMemo(() => {
-    if (!searchQuery) return mockEvents;
+    if (!searchQuery) return events;
     const query = searchQuery.toLowerCase();
-    return mockEvents.filter(
+    return events.filter(
       (event) =>
-        event.title.toLowerCase().includes(query) ||
-        event.instructor.toLowerCase().includes(query) ||
-        event.room.toLowerCase().includes(query)
+        event.classType?.toLowerCase().includes(query) ||
+        event.instructor?.toLowerCase().includes(query) ||
+        event.room?.toLowerCase().includes(query)
     );
-  }, [searchQuery]);
-
-  // Add recurring data to some events for demo
-  const eventsWithRecurring = useMemo(() => {
-    return filteredEvents.map((event, i) => ({
-      ...event,
-      isRecurring: i % 2 === 0,
-      recurringDays: i % 2 === 0 ? ['S', 'M', 'W', 'T', 'F'] : undefined,
-      status: (['scheduled', 'completed', 'cancelled'] as const)[i % 3],
-    }));
-  }, [filteredEvents]);
+  }, [searchQuery, events]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -74,6 +85,12 @@ export default function SchedulePage() {
       />
 
       <main className="p-4 md:p-6 space-y-6">
+        {error && (
+          <div className="text-sm text-red-600 dark:text-red-400">
+            ⚠ Backend connection failed - showing offline mode
+          </div>
+        )}
+
         {/* Top Navigation */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <TabNav activeTab={activeTab} onTabChange={setActiveTab} />
@@ -104,7 +121,7 @@ export default function SchedulePage() {
           />
           <DateNavigation
             currentDate={currentDate}
-            onDateChange={setCurrentDate}
+            onDateChange={handleDateChange}
             viewMode={viewMode}
             onViewModeChange={setViewMode}
           />
@@ -121,21 +138,30 @@ export default function SchedulePage() {
           />
         </div>
 
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        )}
+
         {/* Main Content */}
-        <div className="rounded-lg border border-border bg-card overflow-hidden">
-          {displayMode === 'calendar' ? (
-            <CalendarGrid
-              events={eventsWithRecurring}
-              currentDate={currentDate}
-              onEventClick={handleEventClick}
-            />
-          ) : (
-            <ListView
-              events={eventsWithRecurring}
-              onEventClick={handleEventClick}
-            />
-          )}
-        </div>
+        {!isLoading && (
+          <div className="rounded-lg border border-border bg-card overflow-hidden">
+            {displayMode === 'calendar' ? (
+              <CalendarGrid
+                events={filteredEvents}
+                currentDate={currentDate}
+                onEventClick={handleEventClick}
+              />
+            ) : (
+              <ListView
+                events={filteredEvents}
+                onEventClick={handleEventClick}
+              />
+            )}
+          </div>
+        )}
       </main>
 
       <ScheduleClassModal

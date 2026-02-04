@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Upload, Clock, X } from 'lucide-react';
+import { Plus, Upload } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -18,23 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
-import { mockClassTypes, mockInstructors, mockRooms } from '../../data/mockData';
+import { useInstructors, useRooms, useCreateSchedule } from '../../hooks/useScheduleAPI';
 import { RecurringSettingsModal } from './RecurringSettingsModal';
 import { RecurringPeriod } from '../../types/schedule';
+import { toast } from 'sonner';
 
 interface ScheduleClassModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-interface TimeSlot {
-  id: string;
-  time: string;
-}
-
-interface DaySchedule {
-  day: string;
-  slots: TimeSlot[];
 }
 
 export function ScheduleClassModal({ open, onOpenChange }: ScheduleClassModalProps) {
@@ -42,45 +33,78 @@ export function ScheduleClassModal({ open, onOpenChange }: ScheduleClassModalPro
   const [dropInAvailability, setDropInAvailability] = useState(true);
   const [duration, setDuration] = useState('60');
   const [capacity, setCapacity] = useState('20');
+  const [classType, setClassType] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [timeSlot, setTimeSlot] = useState('');
   const [isRecurring, setIsRecurring] = useState(false);
   const [showRecurringSettings, setShowRecurringSettings] = useState(false);
   const [recurringPeriod, setRecurringPeriod] = useState<RecurringPeriod>('weekly');
-  const [selectedClassType, setSelectedClassType] = useState('');
   const [selectedInstructor, setSelectedInstructor] = useState('');
   const [selectedRoom, setSelectedRoom] = useState('');
-  const [daySchedules, setDaySchedules] = useState<DaySchedule[]>([
-    { day: 'Sunday', slots: [{ id: '1', time: '' }, { id: '2', time: '' }] },
-    { day: 'Monday', slots: [{ id: '1', time: '' }, { id: '2', time: '' }] },
-    { day: 'Tuesday', slots: [{ id: '1', time: '' }] },
-    { day: 'Wednesday', slots: [] },
-    { day: 'Thursday', slots: [] },
-    { day: 'Friday', slots: [] },
-    { day: 'Saturday', slots: [] },
-  ]);
+  const [file, setFile] = useState<File | null>(null);
 
-  const handleClassTypeChange = (value: string) => {
-    setSelectedClassType(value);
-    const classType = mockClassTypes.find((ct) => ct.id === value);
-    if (classType) {
-      setDuration(classType.defaultDuration.toString());
-      setCapacity(classType.defaultCapacity.toString());
+  // API hooks
+  const { data: instructors = [], isLoading: loadingInstructors } = useInstructors();
+  const { data: rooms = [], isLoading: loadingRooms } = useRooms();
+  const createScheduleMutation = useCreateSchedule();
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
     }
   };
 
-  const handleSubmit = () => {
-    console.log('Creating schedule...', {
-      classType: selectedClassType,
-      instructor: selectedInstructor,
-      room: selectedRoom,
-      duration,
-      capacity,
-      waitingListCapacity,
-      dropInAvailability,
-      isRecurring,
-      recurringPeriod,
-    });
-    onOpenChange(false);
+  const handleSubmit = async () => {
+    if (!classType || !selectedInstructor || !selectedRoom || !startDate || !endDate || !timeSlot) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      const scheduleData = {
+        classType,
+        instructor: selectedInstructor,
+        room: selectedRoom,
+        duration: parseInt(duration),
+        startDate,
+        endDate,
+        recurrenceType: (isRecurring ? 'WEEKLY' : 'NONE') as 'NONE' | 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'CUSTOM',
+        timeSlots: [timeSlot]
+      };
+
+      await createScheduleMutation.mutateAsync(scheduleData);
+      
+      toast.success('Schedule created successfully!');
+      onOpenChange(false);
+      resetForm();
+    } catch (error) {
+      toast.error('Failed to create schedule');
+      console.error('Error creating schedule:', error);
+    }
   };
+
+  const resetForm = () => {
+    setClassType('');
+    setSelectedInstructor('');
+    setSelectedRoom('');
+    setDuration('60');
+    setCapacity('20');
+    setStartDate('');
+    setEndDate('');
+    setTimeSlot('');
+    setIsRecurring(false);
+    setFile(null);
+  };
+
+  const handleRecurringToggle = (checked: boolean) => {
+    setIsRecurring(checked);
+    if (checked) {
+      setShowRecurringSettings(true);
+    }
+  };
+
+
 
   return (
     <>
@@ -98,43 +122,46 @@ export function ScheduleClassModal({ open, onOpenChange }: ScheduleClassModalPro
             <div className="space-y-2">
               <Label className="text-sm font-medium">File Upload</Label>
               <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-muted-foreground/50 transition-colors cursor-pointer">
-                <Upload className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
-                <p className="font-medium mb-1">Click or drag file to upload</p>
-                <p className="text-sm text-muted-foreground">
-                  SVG, PNG, JPG or GIF (max. 5MBG)
-                </p>
+                <input
+                  type="file"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="file-upload"
+                  accept="image/*,.pdf,.doc,.docx"
+                />
+                <label htmlFor="file-upload" className="cursor-pointer">
+                  <Upload className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
+                  <p className="font-medium mb-1">
+                    {file ? file.name : 'Click or drag file to upload'}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    SVG, PNG, JPG or GIF (max. 5MB)
+                  </p>
+                </label>
               </div>
             </div>
 
             {/* Class Type */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Choose Class Type</Label>
-              <Select value={selectedClassType} onValueChange={handleClassTypeChange}>
-                <SelectTrigger className="bg-secondary border-0">
-                  <SelectValue placeholder="Select a class type to auto fill" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover">
-                  {mockClassTypes.map((type) => (
-                    <SelectItem key={type.id} value={type.id}>
-                      {type.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-sm font-medium">Class Type *</Label>
+              <Input
+                value={classType}
+                onChange={(e) => setClassType(e.target.value)}
+                placeholder="e.g., Morning Crossfit, Yoga Flow"
+                className="bg-secondary border-0"
+              />
             </div>
 
             {/* Waiting List & Drop-in */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Waiting List Capacity</Label>
-                <div className="relative">
-                  <Input
-                    type="number"
-                    value={waitingListCapacity}
-                    onChange={(e) => setWaitingListCapacity(e.target.value)}
-                    className="bg-secondary border-0"
-                  />
-                </div>
+                <Input
+                  type="number"
+                  value={waitingListCapacity}
+                  onChange={(e) => setWaitingListCapacity(e.target.value)}
+                  className="bg-secondary border-0"
+                />
               </div>
               <div className="flex items-center justify-between rounded-lg bg-secondary p-3">
                 <Label className="text-sm font-medium">Drop in Availability</Label>
@@ -149,7 +176,7 @@ export function ScheduleClassModal({ open, onOpenChange }: ScheduleClassModalPro
             {/* Duration & Capacity */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Duration (mins)</Label>
+                <Label className="text-sm font-medium">Duration (mins) *</Label>
                 <Input
                   type="number"
                   value={duration}
@@ -168,17 +195,50 @@ export function ScheduleClassModal({ open, onOpenChange }: ScheduleClassModalPro
               </div>
             </div>
 
+            {/* Date Range */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Start Date *</Label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="bg-secondary border-0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">End Date *</Label>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="bg-secondary border-0"
+                />
+              </div>
+            </div>
+
+            {/* Time Slot */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Time Slot *</Label>
+              <Input
+                type="time"
+                value={timeSlot}
+                onChange={(e) => setTimeSlot(e.target.value)}
+                className="bg-secondary border-0"
+              />
+            </div>
+
             {/* Instructor & Room */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Instructor</Label>
+                <Label className="text-sm font-medium">Instructor *</Label>
                 <Select value={selectedInstructor} onValueChange={setSelectedInstructor}>
                   <SelectTrigger className="bg-secondary border-0">
-                    <SelectValue placeholder="Instructor name" />
+                    <SelectValue placeholder={loadingInstructors ? "Loading..." : "Instructor name"} />
                   </SelectTrigger>
                   <SelectContent className="bg-popover">
-                    {mockInstructors.map((instructor) => (
-                      <SelectItem key={instructor.id} value={instructor.id}>
+                    {instructors.map((instructor) => (
+                      <SelectItem key={instructor._id} value={instructor._id}>
                         {instructor.name}
                       </SelectItem>
                     ))}
@@ -186,14 +246,14 @@ export function ScheduleClassModal({ open, onOpenChange }: ScheduleClassModalPro
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Room/Studio</Label>
+                <Label className="text-sm font-medium">Room/Studio *</Label>
                 <Select value={selectedRoom} onValueChange={setSelectedRoom}>
                   <SelectTrigger className="bg-secondary border-0">
-                    <SelectValue placeholder="e.g, Main Studio" />
+                    <SelectValue placeholder={loadingRooms ? "Loading..." : "e.g, Main Studio"} />
                   </SelectTrigger>
                   <SelectContent className="bg-popover">
-                    {mockRooms.map((room) => (
-                      <SelectItem key={room.id} value={room.id}>
+                    {rooms.map((room) => (
+                      <SelectItem key={room._id} value={room._id}>
                         {room.name}
                       </SelectItem>
                     ))}
@@ -213,7 +273,7 @@ export function ScheduleClassModal({ open, onOpenChange }: ScheduleClassModalPro
                 </div>
                 <Switch
                   checked={isRecurring}
-                  onCheckedChange={setIsRecurring}
+                  onCheckedChange={handleRecurringToggle}
                   className="data-[state=checked]:bg-success"
                 />
               </div>
@@ -234,9 +294,22 @@ export function ScheduleClassModal({ open, onOpenChange }: ScheduleClassModalPro
             <Button variant="secondary" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button variant="accent" onClick={handleSubmit}>
-              <Plus className="h-4 w-4 mr-1" />
-              Create Schedule
+            <Button 
+              variant="accent" 
+              onClick={handleSubmit}
+              disabled={createScheduleMutation.isPending}
+            >
+              {createScheduleMutation.isPending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Create Schedule
+                </>
+              )}
             </Button>
           </div>
         </DialogContent>
