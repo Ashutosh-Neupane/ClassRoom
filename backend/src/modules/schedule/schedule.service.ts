@@ -35,7 +35,11 @@ export const createScheduleService = async (payload: any) => {
         Object.keys(payload.recurrenceRule.weeklySchedule) : [],
       monthlyDates: payload.recurrenceRule.monthlySchedule ? 
         Object.keys(payload.recurrenceRule.monthlySchedule).map(Number) : [],
-      interval: payload.recurrenceRule.interval || 1
+      interval: payload.recurrenceRule.interval || 1,
+      // Store custom schedule for CUSTOM pattern
+      ...(payload.recurrenceRule.pattern === 'custom' && {
+        customSchedule: payload.recurrenceRule.customSchedule
+      })
     } : {
       recurrenceType: 'NONE',
       startDate: payload.date,
@@ -144,7 +148,7 @@ export const getCalendarSchedulesService = async (
       // Recurring event - generate occurrences
       try {
         const recurrenceRule = {
-          pattern: rule.recurrenceType.toLowerCase() as 'daily' | 'weekly' | 'monthly',
+          pattern: rule.recurrenceType.toLowerCase() as 'daily' | 'weekly' | 'monthly' | 'custom',
           startDate: new Date(rule.startDate),
           endDate: new Date(rule.endDate),
           interval: rule.interval || 1,
@@ -160,6 +164,18 @@ export const getCalendarSchedulesService = async (
               });
               return acc;
             }, {} as any)
+          }),
+          ...(rule.recurrenceType === 'MONTHLY' && {
+            monthlySchedule: rule.monthlyDates?.reduce((acc, date) => {
+              acc[date] = rule.timeSlots.map(slot => {
+                const [hour, minute] = slot.split(':').map(Number);
+                return { hour, minute };
+              });
+              return acc;
+            }, {} as any)
+          }),
+          ...(rule.recurrenceType === 'CUSTOM' && {
+            customSchedule: rule.customSchedule || {}
           })
         };
 

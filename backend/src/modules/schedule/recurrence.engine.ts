@@ -116,27 +116,29 @@ export class RecurrenceEngine {
     const interval = rule.interval || 1;
     const monthlySchedule = rule.monthlySchedule || {};
     
-    let currentDate = startOfDay(rule.startDate);
+    let currentDate = new Date(rule.startDate.getFullYear(), rule.startDate.getMonth(), 1);
     const endDate = startOfDay(rule.endDate);
     
     while (currentDate <= endDate) {
-      const dayOfMonth = currentDate.getDate();
-      const timeSlots = monthlySchedule[dayOfMonth];
+      // Check each day of the month that has time slots
+      Object.entries(monthlySchedule).forEach(([dayStr, timeSlots]) => {
+        const dayOfMonth = parseInt(dayStr);
+        const targetDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayOfMonth);
+        
+        // Check if this date exists in this month and is within range
+        if (targetDate.getMonth() === currentDate.getMonth() && 
+            targetDate >= startOfDay(rule.startDate) && 
+            targetDate <= endDate &&
+            timeSlots.length > 0) {
+          occurrences.push({
+            date: startOfDay(targetDate),
+            timeSlots: [...timeSlots]
+          });
+        }
+      });
       
-      if (timeSlots && timeSlots.length > 0) {
-        occurrences.push({
-          date: new Date(currentDate),
-          timeSlots: [...timeSlots]
-        });
-      }
-      
-      // Move to next day
-      currentDate = addDays(currentDate, 1);
-      
-      // Skip months based on interval
-      if (currentDate.getDate() === 1 && interval > 1) {
-        currentDate = addMonths(currentDate, interval - 1);
-      }
+      // Move to next month based on interval
+      currentDate = addMonths(currentDate, interval);
     }
     
     return occurrences;
@@ -146,7 +148,8 @@ export class RecurrenceEngine {
     const occurrences: GeneratedOccurrence[] = [];
     const customSchedule = rule.customSchedule || {};
     
-    for (const [dateStr, timeSlots] of Object.entries(customSchedule)) {
+    // Custom schedule: specific dates with their time slots
+    Object.entries(customSchedule).forEach(([dateStr, timeSlots]) => {
       const date = new Date(dateStr);
       
       if (isValid(date) && 
@@ -158,7 +161,7 @@ export class RecurrenceEngine {
           timeSlots: [...timeSlots]
         });
       }
-    }
+    });
     
     return occurrences.sort((a, b) => a.date.getTime() - b.date.getTime());
   }

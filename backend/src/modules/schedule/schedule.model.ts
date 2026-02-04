@@ -19,6 +19,7 @@ export interface IScheduleRule extends Document {
   monthlyDates?: number[]; // [5,20]
   timeSlots: string[]; // ["09:00", "14:00"]
   interval?: number; // every n days/weeks
+  customSchedule?: any; // JSON object for custom patterns
   attachment?: string; // file path
   createdAt: Date;
   updatedAt: Date;
@@ -46,6 +47,7 @@ const ScheduleRuleSchema: Schema = new Schema(
     monthlyDates: [{ type: Number, min: 1, max: 31 }],
     timeSlots: [{ type: String, required: true }], // "HH:mm"
     interval: { type: Number, default: 1 }, // every n days/weeks
+    customSchedule: { type: Schema.Types.Mixed }, // JSON object for custom patterns
     attachment: { type: String }, // file path
   },
   { timestamps: true }
