@@ -1,7 +1,8 @@
 import express from "express";
 import cors from "cors";
 import { errorHandler } from "./middlewares/errorHandler";
-import { sendSuccess } from "./utils/apiResponse";
+import { sendSuccess, sendError } from "./utils/apiResponse";
+import { testModels } from "./controllers/test.controller";
 
 const app = express();
 
@@ -14,6 +15,18 @@ app.get('/api/health', (req, res) => {
     title: "Health Check",
     message: "Backend server is running",
     data: { status: "OK", timestamp: new Date().toISOString() }
+  });
+});
+
+// Test models route (both GET and POST)
+app.get('/api/test-models', testModels);
+app.post('/api/test-models', testModels);
+
+// 404 handler for undefined routes
+app.all('*', (req, res) => {
+  sendError(res, 404, {
+    title: "Route Not Found",
+    message: `Cannot ${req.method} ${req.path}`,
   });
 });
 
