@@ -2,14 +2,16 @@ import express from "express";
 import cors from "cors";
 import { errorHandler } from "./middlewares/errorHandler";
 import { sendSuccess, sendError } from "./utils/apiResponse";
-import { testModels } from "./controllers/test.controller";
-import { testRecurrenceEngine } from "./controllers/recurrence.test.controller";
-import { testConflictDetection } from "./controllers/conflict.test.controller";
-import { debugConflictDetection } from "./controllers/debug.conflict.controller";
 import scheduleRoutes from "./modules/schedule/schedule.routes";
 
-import { testScheduleAPI } from "./controllers/schedule.test.controller";
-import { runScheduleAPITests } from "./controllers/automated.schedule.test.controller";
+// Test controllers (organized in tests folder)
+import { testModels } from "./tests/test.controller";
+import { testRecurrenceEngine } from "./tests/recurrence.test.controller";
+import { testConflictDetection } from "./tests/conflict.test.controller";
+import { debugConflictDetection } from "./tests/debug.conflict.controller";
+import { testScheduleAPI } from "./tests/schedule.test.controller";
+import { runScheduleAPITests } from "./tests/automated.schedule.test.controller";
+import { testCalendarAPI } from "./tests/calendar.test.controller";
 
 const app = express();
 
@@ -25,28 +27,19 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Test models route (both GET and POST)
+// Schedule API routes (main feature)
+app.use('/api/schedule', scheduleRoutes);
+
+// Test routes (development only)
 app.get('/api/test-models', testModels);
 app.post('/api/test-models', testModels);
-
-// Test recurrence engine
 app.get('/api/test-recurrence', testRecurrenceEngine);
-
-// Test conflict detection
 app.get('/api/test-conflicts', testConflictDetection);
-
-// Debug conflict detection
 app.get('/api/debug-conflicts', debugConflictDetection);
-
-// Test schedule API
 app.get('/api/test-schedule-api', testScheduleAPI);
-
-// Automated schedule API tests
 app.get('/api/run-schedule-tests', runScheduleAPITests);
 app.post('/api/run-schedule-tests', runScheduleAPITests);
-
-// Schedule API routes
-app.use('/api/schedule', scheduleRoutes);
+app.get('/api/test-calendar', testCalendarAPI);
 
 // 404 handler for undefined routes
 app.use((req, res, next) => {
