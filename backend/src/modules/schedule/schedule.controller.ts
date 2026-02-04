@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import { createScheduleSchema } from "./schedule.validation";
-import { createScheduleService, getCalendarSchedulesService } from "./schedule.service";
+import { createScheduleSchema, updateScheduleSchema } from "./schedule.validation";
+import { createScheduleService, getCalendarSchedulesService, updateScheduleService, deleteScheduleService } from "./schedule.service";
 import { sendSuccess } from "../../utils/apiResponse";
 
 export const createSchedule = async (
@@ -17,6 +17,44 @@ export const createSchedule = async (
       title: "Schedule Created",
       message: "Class schedule created successfully",
       data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateSchedule = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const validated = updateScheduleSchema.parse(req.body);
+
+    const result = await updateScheduleService(req.params.id, validated);
+
+    return sendSuccess(res, 200, {
+      title: "Schedule Updated",
+      message: "Class schedule updated successfully",
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deleteSchedule = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    await deleteScheduleService(req.params.id);
+
+    return sendSuccess(res, 200, {
+      title: "Schedule Deleted",
+      message: "Class schedule deleted successfully",
+      data: {},
     });
   } catch (err) {
     next(err);

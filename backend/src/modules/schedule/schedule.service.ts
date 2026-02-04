@@ -14,6 +14,37 @@ export const createScheduleService = async (payload: any) => {
   return schedule;
 };
 
+export const updateScheduleService = async (
+  id: string,
+  payload: any
+) => {
+  const existing = await ScheduleRule.findById(id);
+
+  if (!existing) {
+    throw new Error("Schedule not found");
+  }
+
+  // Merge old + new
+  const updatedRule = Object.assign(existing, payload);
+
+  // Check conflicts with updated data
+  await checkScheduleConflicts(updatedRule);
+
+  await updatedRule.save();
+
+  return updatedRule;
+};
+
+export const deleteScheduleService = async (id: string) => {
+  const existing = await ScheduleRule.findById(id);
+
+  if (!existing) {
+    throw new Error("Schedule not found");
+  }
+
+  await existing.deleteOne();
+};
+
 export const getCalendarSchedulesService = async (
   from: Date,
   to: Date
