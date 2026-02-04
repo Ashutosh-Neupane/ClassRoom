@@ -152,6 +152,7 @@ export default function SchedulePage() {
               <CalendarGrid
                 events={filteredEvents}
                 currentDate={currentDate}
+                viewMode={viewMode}
                 onEventClick={handleEventClick}
               />
             ) : (

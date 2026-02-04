@@ -41,6 +41,7 @@ export interface ScheduleRule {
 // Calendar Event (projected from backend)
 export interface CalendarEvent {
   _id: string;
+  title?: string;
   classType: string;
   instructor: string;
   room: string;
@@ -48,6 +49,9 @@ export interface CalendarEvent {
   startTime: string;
   endTime: string;
   duration: number;
+  capacity: number;
+  booked: number;
+  status: string;
   ruleId: string;
   isRecurring: boolean;
 }
