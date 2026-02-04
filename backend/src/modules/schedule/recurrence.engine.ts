@@ -66,8 +66,17 @@ export class RecurrenceEngine {
     const interval = rule.interval || 1;
     const timeSlots = rule.timeSlots || [];
     
-    let currentDate = startOfDay(rule.startDate);
-    const endDate = startOfDay(rule.endDate);
+    // Use UTC dates to avoid timezone issues
+    let currentDate = new Date(Date.UTC(
+      rule.startDate.getFullYear(),
+      rule.startDate.getMonth(),
+      rule.startDate.getDate()
+    ));
+    const endDate = new Date(Date.UTC(
+      rule.endDate.getFullYear(),
+      rule.endDate.getMonth(),
+      rule.endDate.getDate()
+    ));
     
     while (currentDate <= endDate) {
       occurrences.push({

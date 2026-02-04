@@ -105,6 +105,10 @@ export const getCalendarSchedulesService = async (
   from: Date,
   to: Date
 ) => {
+  // Normalize dates to start of day in UTC for proper comparison
+  const fromDate = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  const toDate = new Date(to.getFullYear(), to.getMonth(), to.getDate(), 23, 59, 59, 999);
+  
   const rules = await ScheduleRule.find({
     startDate: { $lte: to },
     endDate: { $gte: from },
@@ -118,19 +122,20 @@ export const getCalendarSchedulesService = async (
     if (rule.recurrenceType === 'NONE') {
       // Single event
       const eventDate = new Date(rule.startDate);
-      if (eventDate >= from && eventDate <= to) {
+      const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+      if (eventDateOnly >= fromDate && eventDateOnly <= toDate) {
         rule.timeSlots.forEach(timeSlot => {
           const [hour, minute] = timeSlot.split(':').map(Number);
-          const startTime = new Date(eventDate);
+          const startTime = new Date(eventDateOnly);
           startTime.setHours(hour, minute, 0, 0);
           const endTime = new Date(startTime);
           endTime.setMinutes(endTime.getMinutes() + rule.duration);
 
           events.push({
-            _id: `${rule._id}-${eventDate.toISOString().split('T')[0]}-${timeSlot}`,
+            _id: `${rule._id}-${eventDateOnly.toISOString().split('T')[0]}-${timeSlot}`,
             title: rule.title || rule.classType,
             classType: rule.classType,
-            date: eventDate,
+            date: eventDateOnly,
             startTime: timeSlot,
             endTime: `${endTime.getHours().toString().padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`,
             duration: rule.duration,
@@ -182,9 +187,11 @@ export const getCalendarSchedulesService = async (
         const occurrences = RecurrenceEngine.generateOccurrences(recurrenceRule);
         
         occurrences.forEach(occ => {
-          if (occ.date >= from && occ.date <= to) {
+          // Normalize occurrence date to date-only for comparison
+          const occDateOnly = new Date(occ.date.getFullYear(), occ.date.getMonth(), occ.date.getDate());
+          if (occDateOnly >= fromDate && occDateOnly <= toDate) {
             occ.timeSlots.forEach(timeSlot => {
-              const startTime = new Date(occ.date);
+              const startTime = new Date(occDateOnly);
               startTime.setHours(timeSlot.hour, timeSlot.minute, 0, 0);
               const endTime = new Date(startTime);
               endTime.setMinutes(endTime.getMinutes() + rule.duration);
@@ -193,10 +200,10 @@ export const getCalendarSchedulesService = async (
               const endTimeStr = `${endTime.getHours().toString().padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`;
 
               events.push({
-                _id: `${rule._id}-${occ.date.toISOString().split('T')[0]}-${timeStr}`,
+                _id: `${rule._id}-${occDateOnly.toISOString().split('T')[0]}-${timeStr}`,
                 title: rule.title || rule.classType,
                 classType: rule.classType,
-                date: occ.date,
+                date: occDateOnly,
                 startTime: timeStr,
                 endTime: endTimeStr,
                 duration: rule.duration,

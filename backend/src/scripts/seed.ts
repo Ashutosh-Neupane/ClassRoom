@@ -125,9 +125,9 @@ async function seedData() {
     const durations = [30, 45, 60, 75, 90, 120]; // minutes
 
     const scheduleRules = [];
-    const today = new Date();
-    const startOfYear = new Date(today.getFullYear(), 0, 1);
-    const endOfYear = new Date(today.getFullYear(), 11, 31);
+    const currentYear = 2024; // Use 2024 for frontend compatibility
+    const startOfYear = new Date(currentYear, 0, 1);
+    const endOfYear = new Date(currentYear, 11, 31);
 
     for (let i = 0; i < 180; i++) {
       const recurrenceType = getRandomElement(recurrenceTypes);
