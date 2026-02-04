@@ -3,10 +3,21 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 // API Response Types
 export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  error?: string;
+  title: string;
+  message: string;
+  data: T;
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export interface ApiErrorResponse {
+  title: string;
+  message: string;
+  errors?: Array<{ field: string; message: string }>;
 }
 
 // Backend Types (matching exact backend schema)
@@ -58,17 +69,30 @@ export interface Room {
 
 // Form data for creating schedules
 export interface CreateScheduleData {
+  title: string;
+  description?: string;
   classType: string;
   instructor: string;
   room: string;
+  capacity: number;
+  waitingListCapacity: number;
   duration: number;
-  startDate: string;
-  endDate: string;
-  recurrenceType: 'NONE' | 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'CUSTOM';
-  weeklyDays?: string[];
-  monthlyDates?: number[];
-  timeSlots: string[];
-  interval?: number;
+  dropInAvailability: boolean;
+  isRecurring: boolean;
+  // Single event fields
+  date?: string;
+  startTime?: string;
+  endTime?: string;
+  // Recurring event fields
+  recurrenceRule?: {
+    pattern: 'daily' | 'weekly' | 'monthly' | 'custom';
+    startDate: string;
+    endDate: string;
+    interval?: number;
+    timeSlots?: Array<{ hour: number; minute: number }>;
+    weeklySchedule?: { [key: string]: Array<{ hour: number; minute: number }> };
+    monthlySchedule?: { [key: number]: Array<{ hour: number; minute: number }> };
+  };
 }
 
 // API Service Class
@@ -92,18 +116,16 @@ class ScheduleAPI {
         throw new Error(data.message || 'API request failed');
       }
 
-      // Backend returns { title, message, data }, convert to { success, data }
+      // Backend returns { title, message, data, pagination? }
       return {
-        success: true,
+        title: data.title,
+        message: data.message,
         data: data.data,
-        message: data.message
+        ...(data.pagination && { pagination: data.pagination })
       };
     } catch (error) {
       console.error('API Error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
+      throw error;
     }
   }
 

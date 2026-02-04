@@ -3,10 +3,15 @@ import mongoose, { Schema, Document, Types } from "mongoose";
 export type RecurrenceType = "NONE" | "DAILY" | "WEEKLY" | "MONTHLY" | "CUSTOM";
 
 export interface IScheduleRule extends Document {
+  title?: string;
+  description?: string;
   classType: string;
   instructor: Types.ObjectId;
   room: Types.ObjectId;
+  capacity?: number;
+  waitingListCapacity?: number;
   duration: number; // in minutes
+  dropInAvailability?: boolean;
   startDate: Date;
   endDate: Date;
   recurrenceType: RecurrenceType;
@@ -21,10 +26,15 @@ export interface IScheduleRule extends Document {
 
 const ScheduleRuleSchema: Schema = new Schema(
   {
+    title: { type: String },
+    description: { type: String },
     classType: { type: String, required: true },
     instructor: { type: Schema.Types.ObjectId, ref: "Instructor", required: true },
     room: { type: Schema.Types.ObjectId, ref: "Room", required: true },
+    capacity: { type: Number, default: 20 },
+    waitingListCapacity: { type: Number, default: 0 },
     duration: { type: Number, required: true },
+    dropInAvailability: { type: Boolean, default: true },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
     recurrenceType: {
