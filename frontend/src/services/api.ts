@@ -116,19 +116,21 @@ class ScheduleAPI {
   }
 
   // Get Calendar Events (projected occurrences)
-  async getCalendarEvents(startDate: string, endDate: string, page: number = 1, limit: number = 50): Promise<ApiResponse<CalendarEvent[]>> {
+  async getCalendarEvents(startDate: string, endDate: string): Promise<ApiResponse<CalendarEvent[]>> {
     const params = new URLSearchParams({
       startDate,
-      endDate,
-      page: page.toString(),
-      limit: limit.toString()
+      endDate
     });
     return this.request<CalendarEvent[]>(`/schedules/calendar?${params}`);
   }
 
-  // Get All Schedule Rules
-  async getScheduleRules(): Promise<ApiResponse<ScheduleRule[]>> {
-    return this.request<ScheduleRule[]>('/schedules');
+  // Get All Schedule Rules with pagination
+  async getScheduleRules(page: number = 1, limit: number = 10): Promise<ApiResponse<ScheduleRule[]>> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString()
+    });
+    return this.request<ScheduleRule[]>(`/schedules?${params}`);
   }
 
   // Get Single Schedule Rule
@@ -166,13 +168,13 @@ class ScheduleAPI {
     return this.request<{ status: string }>('/health');
   }
 
-  // Check Schedule Conflicts
-  async checkConflicts(schedule: CreateScheduleData): Promise<ApiResponse<{ hasConflicts: boolean; conflicts: CalendarEvent[] }>> {
-    return this.request<{ hasConflicts: boolean; conflicts: CalendarEvent[] }>('/schedules/conflicts', {
-      method: 'POST',
-      body: JSON.stringify(schedule),
-    });
-  }
+  // Check Schedule Conflicts (remove - not implemented in backend)
+  // async checkConflicts(schedule: CreateScheduleData): Promise<ApiResponse<{ hasConflicts: boolean; conflicts: CalendarEvent[] }>> {
+  //   return this.request<{ hasConflicts: boolean; conflicts: CalendarEvent[] }>('/schedules/conflicts', {
+  //     method: 'POST',
+  //     body: JSON.stringify(schedule),
+  //   });
+  // }
 }
 
 // Export singleton instance
