@@ -12,6 +12,7 @@ import { debugConflictDetection } from "./tests/debug.conflict.controller";
 import { testScheduleAPI } from "./tests/schedule.test.controller";
 import { runScheduleAPITests } from "./tests/automated.schedule.test.controller";
 import { testCalendarAPI } from "./tests/calendar.test.controller";
+import { testUpdateDeleteAPI } from "./tests/update.delete.test.controller";
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.get('/api/test-schedule-api', testScheduleAPI);
 app.get('/api/run-schedule-tests', runScheduleAPITests);
 app.post('/api/run-schedule-tests', runScheduleAPITests);
 app.get('/api/test-calendar', testCalendarAPI);
+app.get('/api/test-update-delete', testUpdateDeleteAPI);
 
 // 404 handler for undefined routes
 app.use((req, res, next) => {

@@ -13,3 +13,5 @@ export const createScheduleSchema = z.object({
   timeSlots: z.array(z.string()),
   interval: z.number().optional(),
 });
+
+export const updateScheduleSchema = createScheduleSchema.partial();
