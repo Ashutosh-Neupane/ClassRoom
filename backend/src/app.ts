@@ -4,6 +4,8 @@ import { errorHandler } from "./middlewares/errorHandler";
 import { sendSuccess, sendError } from "./utils/apiResponse";
 import { testModels } from "./controllers/test.controller";
 import { testRecurrenceEngine } from "./controllers/recurrence.test.controller";
+import { testConflictDetection } from "./controllers/conflict.test.controller";
+import { debugConflictDetection } from "./controllers/debug.conflict.controller";
 
 const app = express();
 
@@ -25,6 +27,12 @@ app.post('/api/test-models', testModels);
 
 // Test recurrence engine
 app.get('/api/test-recurrence', testRecurrenceEngine);
+
+// Test conflict detection
+app.get('/api/test-conflicts', testConflictDetection);
+
+// Debug conflict detection
+app.get('/api/debug-conflicts', debugConflictDetection);
 
 // 404 handler for undefined routes
 app.use((req, res, next) => {
