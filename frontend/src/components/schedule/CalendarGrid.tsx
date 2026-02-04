@@ -92,7 +92,7 @@ export function CalendarGrid({ events, currentDate, onEventClick }: CalendarGrid
                   >
                     {dayEvents.map((event) => (
                       <button
-                        key={event.id}
+                        key={event._id}
                         onClick={() => onEventClick(event)}
                         className={cn(
                           'w-full rounded-md bg-white dark:bg-gray-800 border-l-4 p-2.5 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 mb-2 shadow-sm',
