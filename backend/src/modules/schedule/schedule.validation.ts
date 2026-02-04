@@ -53,4 +53,23 @@ export const createScheduleSchema = z.object({
   message: "Either provide date/startTime/endTime for single event or recurrenceRule for recurring event"
 });
 
-export const updateScheduleSchema = createScheduleSchema.partial();
+export const updateScheduleSchema = z.object({
+  title: z.string().min(1, "Title is required").optional(),
+  description: z.string().optional(),
+  classType: z.string().min(1, "Class type is required").optional(),
+  instructor: z.string().min(1, "Instructor is required").optional(),
+  room: z.string().min(1, "Room is required").optional(),
+  capacity: z.number().min(1, "Capacity must be at least 1").optional(),
+  waitingListCapacity: z.number().min(0).optional(),
+  duration: z.number().min(1, "Duration must be at least 1 minute").optional(),
+  dropInAvailability: z.boolean().optional(),
+  
+  // Single event fields
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
+  date: z.string().optional(),
+  
+  // Recurring event fields
+  isRecurring: z.boolean().optional(),
+  recurrenceRule: recurrenceRuleSchema.optional()
+});
