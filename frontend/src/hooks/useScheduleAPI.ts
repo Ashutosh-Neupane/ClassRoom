@@ -14,7 +14,7 @@ export const QUERY_KEYS = {
 } as const;
 
 // Hook for fetching calendar events with pagination
-export function useCalendarEvents(currentDate: Date, viewMode: 'day' | 'week' | 'month' = 'week', page: number = 1, limit: number = 50) {
+export function useCalendarEvents(currentDate: Date, viewMode: 'day' | 'week' | 'month' = 'week') {
   const getDateRange = (date: Date, mode: 'day' | 'week' | 'month') => {
     switch (mode) {
       case 'day':
@@ -34,8 +34,8 @@ export function useCalendarEvents(currentDate: Date, viewMode: 'day' | 'week' | 
 
   return useQuery({
     queryKey: QUERY_KEYS.calendar(startDateStr, endDateStr),
-    queryFn: () => scheduleAPI.getCalendarEvents(startDateStr, endDateStr, page, limit),
-    select: (response) => response.success ? response.data || [] : [],
+    queryFn: () => scheduleAPI.getCalendarEvents(startDateStr, endDateStr),
+    select: (response) => response.data || [],
     staleTime: 5 * 60 * 1000, // 5 minutes
     placeholderData: (previousData) => previousData, // Keep previous data while fetching new
   });
@@ -129,11 +129,14 @@ export function useCalendarNavigation(currentDate: Date, viewMode: 'day' | 'week
 }
 
 // Hook for fetching all schedule rules
-export function useScheduleRules() {
+export function useScheduleRules(page: number = 1, limit: number = 10) {
   return useQuery({
-    queryKey: QUERY_KEYS.schedules,
-    queryFn: () => scheduleAPI.getScheduleRules(),
-    select: (response) => response.success ? response.data || [] : [],
+    queryKey: [...QUERY_KEYS.schedules, page, limit],
+    queryFn: () => scheduleAPI.getScheduleRules(page, limit),
+    select: (response) => ({
+      schedules: response.data || [],
+      pagination: response.pagination
+    }),
   });
 }
 
@@ -142,7 +145,7 @@ export function useScheduleRule(id: string) {
   return useQuery({
     queryKey: QUERY_KEYS.schedule(id),
     queryFn: () => scheduleAPI.getScheduleRule(id),
-    select: (response) => response.success ? response.data : null,
+    select: (response) => response.data,
     enabled: !!id,
   });
 }
@@ -152,7 +155,7 @@ export function useInstructors() {
   return useQuery({
     queryKey: QUERY_KEYS.instructors,
     queryFn: () => scheduleAPI.getInstructors(),
-    select: (response) => response.success ? response.data || [] : [],
+    select: (response) => response.data || [],
     staleTime: 10 * 60 * 1000, // 10 minutes - instructors don't change often
   });
 }
@@ -162,7 +165,7 @@ export function useRooms() {
   return useQuery({
     queryKey: QUERY_KEYS.rooms,
     queryFn: () => scheduleAPI.getRooms(),
-    select: (response) => response.success ? response.data || [] : [],
+    select: (response) => response.data || [],
     staleTime: 10 * 60 * 1000, // 10 minutes - rooms don't change often
   });
 }
@@ -210,19 +213,19 @@ export function useDeleteSchedule() {
   });
 }
 
-// Hook for checking schedule conflicts
-export function useCheckConflicts() {
-  return useMutation({
-    mutationFn: (schedule: CreateScheduleData) => scheduleAPI.checkConflicts(schedule),
-  });
-}
+// Hook for checking schedule conflicts (commented out - not implemented)
+// export function useCheckConflicts() {
+//   return useMutation({
+//     mutationFn: (schedule: CreateScheduleData) => scheduleAPI.checkConflicts(schedule),
+//   });
+// }
 
 // Hook for health check
 export function useHealthCheck() {
   return useQuery({
     queryKey: QUERY_KEYS.health,
     queryFn: () => scheduleAPI.healthCheck(),
-    select: (response) => response.success ? response.data : null,
+    select: (response) => response.data,
     retry: 3,
     retryDelay: 1000,
   });
