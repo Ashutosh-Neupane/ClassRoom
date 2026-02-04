@@ -26,7 +26,7 @@ const upload = multer({
         file.mimetype.includes('spreadsheet')) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type'), false);
+      cb(new Error('Invalid file type'));
     }
   }
 });

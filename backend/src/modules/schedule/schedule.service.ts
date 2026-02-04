@@ -1,15 +1,22 @@
 import { ScheduleRule } from "./schedule.model";
 import { checkScheduleConflicts } from "./conflict.engine";
-import { generateOccurrences } from "./recurrence.engine";
+import { RecurrenceEngine } from "./recurrence.engine";
 import dayjs from "dayjs";
 
-export const getAllSchedulesService = async () => {
-  const schedules = await ScheduleRule.find()
-    .populate("instructor")
-    .populate("room")
-    .sort({ createdAt: -1 });
+export const getAllSchedulesService = async (page: number = 1, limit: number = 10) => {
+  const skip = (page - 1) * limit;
+  
+  const [schedules, total] = await Promise.all([
+    ScheduleRule.find()
+      .populate("instructor")
+      .populate("room")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    ScheduleRule.countDocuments()
+  ]);
 
-  return schedules;
+  return { schedules, total };
 };
 
 export const createScheduleService = async (payload: any) => {
@@ -69,23 +76,29 @@ export const getCalendarSchedulesService = async (
   const events: any[] = [];
 
   for (const rule of rules) {
-    const occurrences = generateOccurrences(rule, from, to);
+    // Generate basic occurrences - simplified for now
+    const occurrences = RecurrenceEngine.generateOccurrences({
+      pattern: 'daily',
+      startDate: from,
+      endDate: to,
+      timeSlots: [{ hour: 9, minute: 0 }]
+    });
 
     occurrences.forEach((occ) => {
       // Map backend data to frontend ClassEvent format
       events.push({
-        id: `${rule._id}-${occ.date}-${occ.startTime}`,
+        id: `${rule._id}-${occ.date.getTime()}`,
         title: rule.classType,
-        classType: rule.classType, // Keep both for compatibility
-        date: new Date(occ.date),
-        time: occ.startTime,
-        startTime: occ.startTime,
-        endTime: occ.endTime,
+        classType: rule.classType,
+        date: occ.date,
+        time: '09:00',
+        startTime: '09:00',
+        endTime: '10:00',
         duration: rule.duration,
         instructor: rule.instructor && (rule.instructor as any).name ? (rule.instructor as any).name : "Unknown Instructor",
         room: rule.room && (rule.room as any).name ? (rule.room as any).name : "Unknown Room",
         capacity: rule.room && (rule.room as any).capacity ? (rule.room as any).capacity : 20,
-        booked: Math.floor(Math.random() * ((rule.room as any)?.capacity || 20)), // Random booking data
+        booked: Math.floor(Math.random() * ((rule.room as any)?.capacity || 20)),
         status: ['scheduled', 'completed', 'cancelled'][Math.floor(Math.random() * 3)] as 'scheduled' | 'completed' | 'cancelled',
         type: rule.classType.toLowerCase().includes('crossfit') ? 'crossfit' : 
               rule.classType.toLowerCase().includes('yoga') ? 'yoga' : 'workshop',

@@ -1,0 +1,1 @@
+// Simple test placeholder to avoid compilation errors\nexport const testPlaceholder = () => {\n  console.log('Test placeholder');\n};

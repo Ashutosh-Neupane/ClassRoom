@@ -3,7 +3,9 @@ import { createScheduleSchema, updateScheduleSchema } from "./schedule.validatio
 import { createScheduleService, getCalendarSchedulesService, updateScheduleService, deleteScheduleService, getAllSchedulesService } from "./schedule.service";
 import { Instructor } from "../instructor/instructor.model";
 import { Room } from "../room/room.model";
-import { sendSuccess } from "../../utils/apiResponse";
+import { sendSuccess, sendError } from "../../utils/apiResponse";
+import { parsePagination, createPaginationResult } from "../../middlewares/pagination";
+import { ZodError } from "zod";
 
 export const createSchedule = async (
   req: Request,
@@ -13,7 +15,6 @@ export const createSchedule = async (
   try {
     const validated = createScheduleSchema.parse(req.body);
     
-    // Add file path if uploaded
     const scheduleData = { ...validated };
     if (req.file) {
       (scheduleData as any).attachment = req.file.path;
@@ -27,6 +28,16 @@ export const createSchedule = async (
       data: result,
     });
   } catch (err) {
+    if (err instanceof ZodError) {
+      return sendError(res, 400, {
+        title: "Validation Error",
+        message: "Invalid schedule input",
+        errors: err.issues.map(issue => ({
+          field: issue.path.join('.'),
+          message: issue.message
+        }))
+      });
+    }
     next(err);
   }
 };
@@ -37,12 +48,15 @@ export const getAllSchedules = async (
   next: NextFunction
 ) => {
   try {
-    const schedules = await getAllSchedulesService();
+    const { page, limit } = parsePagination(req);
+    const { schedules, total } = await getAllSchedulesService(page, limit);
+    const pagination = createPaginationResult(total, page, limit);
 
     return sendSuccess(res, 200, {
       title: "Schedules Retrieved",
       message: "All schedules fetched successfully",
       data: schedules,
+      pagination
     });
   } catch (err) {
     next(err);
@@ -57,13 +71,12 @@ export const updateSchedule = async (
   try {
     const validated = updateScheduleSchema.parse(req.body);
     
-    // Add file path if uploaded
     const updateData = { ...validated };
     if (req.file) {
       (updateData as any).attachment = req.file.path;
     }
 
-    const result = await updateScheduleService(req.params.id, updateData);
+    const result = await updateScheduleService(req.params.id as string, updateData);
 
     return sendSuccess(res, 200, {
       title: "Schedule Updated",
@@ -71,6 +84,16 @@ export const updateSchedule = async (
       data: result,
     });
   } catch (err) {
+    if (err instanceof ZodError) {
+      return sendError(res, 400, {
+        title: "Validation Error",
+        message: "Invalid update data",
+        errors: err.issues.map(issue => ({
+          field: issue.path.join('.'),
+          message: issue.message
+        }))
+      });
+    }
     next(err);
   }
 };
@@ -81,7 +104,7 @@ export const deleteSchedule = async (
   next: NextFunction
 ) => {
   try {
-    await deleteScheduleService(req.params.id);
+    await deleteScheduleService(req.params.id as string);
 
     return sendSuccess(res, 200, {
       title: "Schedule Deleted",
@@ -101,12 +124,18 @@ export const getCalendarSchedules = async (
   try {
     const { from, to, startDate, endDate } = req.query;
 
-    // Accept both parameter naming conventions
-    const fromDate = from || startDate;
-    const toDate = to || endDate;
+    const fromDate = (from || startDate) as string;
+    const toDate = (to || endDate) as string;
 
     if (!fromDate || !toDate) {
-      throw new Error("startDate and endDate parameters are required");
+      return sendError(res, 400, {
+        title: "Missing Parameters",
+        message: "startDate and endDate parameters are required",
+        errors: [
+          { field: "startDate", message: "Start date is required" },
+          { field: "endDate", message: "End date is required" }
+        ]
+      });
     }
 
     const events = await getCalendarSchedulesService(
